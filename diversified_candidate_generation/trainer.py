@@ -16,7 +16,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
+import wandb
 
 class Trainer(object):
 
@@ -65,7 +65,7 @@ class Trainer(object):
         self.tester.set_metrics(self.flags_obj.metrics)
 
         if self.flags_obj.test_model == 'best':
-            self.recommender.load_ckpt(self.max_epoch)
+            self.recommender.load_ckpt(self.max_epoch)    # self.max_epoch是最优指标的epoch数
             logging.info('best epoch: {}'.format(self.max_epoch))
 
         self.vm.show_test_info(self.flags_obj)
@@ -75,7 +75,8 @@ class Trainer(object):
             self.tester.max_topk = topk
             results = self.tester.test()
             self.vm.show_result(results)
-            
+            if self.is_wandb:
+                wandb.log(results)
             logging.info('TEST results: topk = {}'.format(topk))
             for metric, value in results.items():
                 logging.info('{}: {}'.format(metric, value))
@@ -103,6 +104,7 @@ class Trainer(object):
         self.leaderboard = self.vm.get_new_text_window('leaderboard')
     
     def update_leaderboard(self, epoch, metric):
+
 
         if metric > self.max_metric:
 
@@ -165,7 +167,6 @@ class Trainer(object):
         logging.info('VALIDATION epoch: {}, results: {}'.format(epoch, results))
         time_cost = time.time() - start_time
         self.vm.step_update_line('validate time cost', time_cost)
-
         return results[self.flags_obj.watch_metric]
 
 

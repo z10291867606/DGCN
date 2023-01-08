@@ -8,14 +8,23 @@ from absl import app
 from absl import flags
 
 import utils
+import wandb
+
+batch_size=10496
+entity="diversity-recommender"
+project="divRec"
+wandb_name="DGCN_taobao_batchsize_256*41_10496"
+is_wandb=True
+if is_wandb:
+    wandb.init(project=project, entity=entity, name=wandb_name)
 
 FLAGS = flags.FLAGS
-
+flags.DEFINE_bool('is_wandb', is_wandb, 'Use wandb or not.')
 flags.DEFINE_string('name', 'DGCN-debug', 'Experiment name.')
 flags.DEFINE_string('model', 'DGCN', 'Model name.')
-flags.DEFINE_bool('use_gpu', True, 'Use GPU or not.')
-flags.DEFINE_integer('gpu_id', 6, 'GPU ID.')
-flags.DEFINE_integer('cg_gpu_id', 6, 'GPU ID for candidate generation.')
+flags.DEFINE_bool('use_gpu', False, 'Use GPU or not.')
+flags.DEFINE_integer('gpu_id', 3, 'GPU ID.')
+flags.DEFINE_integer('cg_gpu_id', 3, 'GPU ID for candidate generation.')
 flags.DEFINE_string('dataset', 'taobao', 'Dataset.')
 flags.DEFINE_integer('embedding_size', 32, 'Embedding size for embedding based models.')
 flags.DEFINE_integer('epochs', 200, 'Max epochs for training.')
@@ -27,20 +36,20 @@ flags.DEFINE_float('lr', 0.01, 'Learning rate.')
 flags.DEFINE_float('min_lr', 0.0001, 'Minimum learning rate.')
 flags.DEFINE_float('weight_decay', 5e-8, 'Weight decay.')
 flags.DEFINE_float('dropout', 0.2, 'Dropout ratio.')
-flags.DEFINE_integer('batch_size', 2048, 'Batch Size.')
+flags.DEFINE_integer('batch_size', batch_size, 'Batch Size.')
 flags.DEFINE_enum('loss', 'point', ['point', 'adv'], 'Loss function.')
 flags.DEFINE_float('adv_gamma', 0.1, 'Weight for adversarial loss.')
 flags.DEFINE_integer('neg_sample_rate', 4, 'Negative Sampling Ratio.')
 flags.DEFINE_integer('hop', 1, 'Number of hops to perform graph convolution.')
 flags.DEFINE_integer('sample_neighbor', 20, 'Number of neighbors to sample.')
 flags.DEFINE_bool('shuffle', True, 'Shuffle the training set or not.')
-flags.DEFINE_multi_string('metrics', ['recall', 'hit_ratio', 'coverage', 'entropy', 'gini_index'], 'Metrics.')
-flags.DEFINE_multi_string('val_metrics', ['recall', 'hit_ratio', 'coverage', 'entropy', 'gini_index'], 'Metrics.')
-flags.DEFINE_string('watch_metric', 'recall', 'Which metric to decide learning rate reduction.')
+flags.DEFINE_multi_string('metrics', ['recall', 'hit_ratio', 'precision', 'ndcg', 'ilmd', 'ilad', 'coverage', 'entropy', 'gini'], 'Metrics.')
+flags.DEFINE_multi_string('val_metrics', ['recall'], 'Metrics.')
+flags.DEFINE_string('watch_metric', 'Recall@300', 'Which metric to decide learning rate reduction.')
 flags.DEFINE_integer('patience', 5, 'Patience for reducing learning rate.')
 flags.DEFINE_integer('es_patience', 3, 'Patience for early stop.')
 flags.DEFINE_enum('test_model', 'best', ['best', 'last'], 'Which model to test.')
-flags.DEFINE_multi_integer('topk', [300], 'Topk for testing recommendation performance.')
+flags.DEFINE_multi_integer('topk', [5,10,20,50,100,200,300], 'Topk for testing recommendation performance.')
 flags.DEFINE_integer('num_workers', 8, 'Number of processes for training and testing.')
 flags.DEFINE_string('load_path', '', 'Load path.')
 flags.DEFINE_string('output', '', 'Directory to save model/log/metrics.')
@@ -60,7 +69,6 @@ def main(argv):
     vm.show_basic_info(flags_obj)
     trainer = utils.ContextManager.set_trainer(flags_obj, cm, vm, dm)
     trainer.train()
-
     trainer.test()
 
 

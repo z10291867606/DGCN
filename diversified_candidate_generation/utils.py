@@ -18,7 +18,8 @@ import scipy.sparse as sp
 
 import torch
 import dgl
-
+import sys
+sys.path.append('/share/share_40t/baoyanghao/DGCN/diversified_candidate_generation')
 import config.const as const_util
 import trainer
 import recommender
@@ -26,7 +27,7 @@ import recommender
 import data_utils.loader as LOADER
 import data_utils.transformer as TRANSFORMER
 import data_utils.sampler as SAMPLER
-
+import wandb
 
 class ContextManager(object):
 
@@ -113,6 +114,7 @@ class VizManager(object):
         self.name = flags_obj.name + '_vm'
         self.exp_name = flags_obj.name
         self.port = flags_obj.port
+        self.is_wandb = flags_obj.is_wandb
         self.set_visdom()
     
     def set_visdom(self):
@@ -174,10 +176,11 @@ class VizManager(object):
     
     def show_result(self, results):
 
+                            
         self.viz.text('-----Results-----', win=self.test, append=True)
 
-        for metric, value in results.items():
             
+        for metric, value in results.items():
             self.viz.text('{}: {}'.format(metric, value), win=self.test, append=True)
         
         self.viz.text('-----------------', win=self.test, append=True)
@@ -363,6 +366,7 @@ class DGLGraphManager(object):
                                                              seed_nodes=seed_nodes,
                                                              add_self_loop=True)
         else:
+            # print(self.graph.adjacency_matrix)
             node_flow = dgl.contrib.sampling.NeighborSampler(g=self.graph,
                                                              batch_size=len(seed_nodes),
                                                              expand_factor=self.num_sample,

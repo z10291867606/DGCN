@@ -43,11 +43,11 @@ class Tester(object):
         self.judger = metrics.Judger(flags_obj)
     
     def test(self):
-
         with torch.no_grad():
 
             self.init_results()
-            self.make_cg()
+            self.make_cg()    # 给self.recommender对象中的user_embeddings和item_embeddings赋值。以及创建generator对象
+                              # 方便self.recommender对象的cg方法使用
 
 
             for data in tqdm(self.dataloader):
@@ -55,13 +55,17 @@ class Tester(object):
                 users, train_pos, test_pos, num_test_pos = data
                 users = users.squeeze()
 
-                items = self.recommender.cg(users, self.cg_topk)
+                items = self.recommender.cg(users, self.cg_topk)  # 我理解的是items是user们的cg_topk个推荐结果
 
-                items = self.filter_history(items, train_pos)
+                items_emb = self.recommender.item_embeddings
 
-                batch_results = self.judger.judge(items, test_pos, num_test_pos)
+                items = self.filter_history(items, train_pos)   # 我理解的是将推荐结果中 已经在训练集中出现的正样例剔除掉
 
-                self.update_results(batch_results)
+                for k in self.topk:
+
+                    batch_results = self.judger.judge(items[:, :k], test_pos, num_test_pos, items_emb)
+
+                    self.update_results(batch_results)
 
         self.average_user()
 
@@ -69,7 +73,8 @@ class Tester(object):
     
     def init_results(self):
 
-        self.results = {k: 0.0 for k in self.judger.metrics}
+        self.results = {}
+        # self.results = {k: 0.0 for k in self.judger.metrics}
     
     def make_cg(self):
 
@@ -82,6 +87,8 @@ class Tester(object):
     def update_results(self, batch_results):
 
         for metric, value in batch_results.items():
+            if metric not in self.results:
+                self.results[metric] = 0.0
             self.results[metric] = self.results[metric] + value
     
     def average_user(self):
